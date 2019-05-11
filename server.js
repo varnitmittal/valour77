@@ -1,0 +1,57 @@
+const express = require('express');
+const mongoose = require('mongoose');
+const bodyParser = require('body-parser');
+const passport = require('passport');
+const signUpRoute = require('./routes/signup.route');
+const loginRoute = require('./routes/login.route'); 
+const app = express();
+const cors = require('cors');
+const cookieParser = require('cookie-parser');
+const config = require('./config/config');
+const withAuth = require('./config/withAuth');
+const path = require('path');
+
+//Mongodb connection
+mongoose.connect(config.mongoURI, {useNewUrlParser: true})
+.then(db => {
+    console.log(`DB connected!!`);
+})
+.catch(err => {
+    console.log(err.message);
+});
+
+//cors middleware
+app.use(cors());
+
+//cookie middleware
+app.use(cookieParser());
+
+//body-parser middlewares
+app.use(bodyParser.urlencoded({
+      extended: false
+    })
+);
+app.use(bodyParser.json());
+
+//passport middleware
+app.use(passport.initialize());
+//passport config
+require('./config/passport')(passport);
+
+//jwt token-cookie verification midlleware 
+app.get('/checkToken', withAuth, (req, res) => {
+    res.sendStatus(200);
+});
+
+//api middleware
+app.use('/signup', signUpRoute);
+app.use('/login', loginRoute);  
+
+//serve static build
+app.use(express.static(path.join(__dirname, 'client','build')));
+app.use('*', (req, res) => res.sendFile(path.join(__dirname, 'client', 'build', 'index.html')));
+
+//Listening on port
+app.listen(process.env.PORT || config.port, () => {
+    console.log(`Server is Live now...`);
+});
